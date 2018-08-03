@@ -1,7 +1,7 @@
 package com.selbovi.exception;
 
 /**
- * Exception to be throw in case if account doesnt exist in database.
+ * Exception to be thrown in case if account doesnt exist in database.
  */
 public class InvalidAccountException extends Exception {
 

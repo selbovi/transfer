@@ -3,6 +3,7 @@ package com.selbovi;
 import com.selbovi.exception.InvalidAccountException;
 import com.selbovi.exception.InvalidAmountForTransferException;
 import com.selbovi.exception.NotEnoughFundsException;
+import com.selbovi.exception.SameAccountProhibitedOperationException;
 import com.selbovi.impl.TransferServiceImpl;
 import com.selbovi.model.Account;
 import org.junit.After;
@@ -31,9 +32,10 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertEquals;
 
 public class TransferTest {
-    //TODO fill account
+    //TODO stdout make operations visible
+    //TODO account empty or NotSpecified
+    //TODO game transfer between all accounts and then check consistency
     //TODO rest api test
-    //TODO parallel invoking tests
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
@@ -53,13 +55,39 @@ public class TransferTest {
         entityManager.getTransaction().commit();
     }
 
+    /**
+     * Throw exception if account doesn't really exists.
+     *
+     * @throws InvalidAccountException exception
+     */
     @Test
-    public void invalidAccount() throws InvalidAccountException {
+    public void throwExceptionForNonExistingAccount() throws InvalidAccountException {
+        //given:
         TransferServiceImpl service = new TransferServiceImpl(entityManagerFactory);
         String wrongAccountOwnerName = "AccountOne";
+
+        //expected:
         thrown.expect(InvalidAccountException.class);
         thrown.expectMessage(InvalidAccountException.ATTEMPT_MSG + wrongAccountOwnerName);
-        service.findAccount(wrongAccountOwnerName, entityManagerFactory.createEntityManager());
+
+        //when:
+        EntityManager entityManager = entityManagerFactory.createEntityManager();
+        entityManager.getTransaction().begin();
+        service.findAccount(wrongAccountOwnerName, entityManager);
+    }
+
+    @Test
+    public void throwExceptionIfTransferBetweenSameAccount() throws InvalidAmountForTransferException, InvalidAccountException, NotEnoughFundsException, SameAccountProhibitedOperationException {
+        //given:
+        TransferServiceImpl service = new TransferServiceImpl(entityManagerFactory);
+        String sameAccountName = "owner";
+
+        //expected:
+        thrown.expect(SameAccountProhibitedOperationException.class);
+        thrown.expectMessage(SameAccountProhibitedOperationException.OPERATION_MSG + sameAccountName);
+
+        //when:
+        service.transfer(sameAccountName, sameAccountName, Integer.MAX_VALUE);
     }
 
     /**
@@ -68,12 +96,12 @@ public class TransferTest {
      * @throws InvalidAmountForTransferException exception
      */
     @Test
-    public void checkBalanceIsPositive() throws InvalidAmountForTransferException, InvalidAccountException, NotEnoughFundsException {
+    public void checkBalanceIsPositive() throws InvalidAmountForTransferException, InvalidAccountException, NotEnoughFundsException, SameAccountProhibitedOperationException {
         //given:
         TransferServiceImpl service = new TransferServiceImpl(entityManagerFactory);
         double invalidAmount = -1;
 
-        //expect:
+        //expected:
         thrown.expect(InvalidAmountForTransferException.class);
         thrown.expectMessage(InvalidAmountForTransferException.AMOUNT_MSG + invalidAmount);
 
@@ -136,7 +164,7 @@ public class TransferTest {
     }
 
     @Test
-    public void successfulTransfer() throws InvalidAmountForTransferException, InvalidAccountException, NotEnoughFundsException {
+    public void successfulTransfer() throws InvalidAmountForTransferException, InvalidAccountException, NotEnoughFundsException, SameAccountProhibitedOperationException {
         //given:
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         entityManager.getTransaction().begin();
@@ -157,15 +185,14 @@ public class TransferTest {
         assertEquals(0, Double.compare(100, entityManager.find(Account.class, accountTo.getOwner()).getBalance()));
     }
 
-    @Ignore
     @Test
     public void concurrentWithdrawalTest() throws InterruptedException, ExecutionException {
         //given:
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         entityManager.getTransaction().begin();
-        int maxUnits = 10;
-        final Account accountFrom = new Account("ownerFrom", maxUnits);
-        final Account accountTo = new Account("ownerTo", 0);
+        int maxUnits = 100000;
+        Account accountFrom = new Account("ownerFrom", maxUnits);
+        Account accountTo = new Account("ownerTo", 0);
         entityManager.persist(accountFrom);
         entityManager.persist(accountTo);
         entityManager.getTransaction().commit();
@@ -176,32 +203,32 @@ public class TransferTest {
 
         //then:
         entityManager = entityManagerFactory.createEntityManager();
-        Account account = entityManager.find(Account.class, accountFrom.getOwner());
-        System.out.println("account = " + account);
-        assertEquals(0, Double.compare(0, account.getBalance()));
-        Account account1 = entityManager.find(Account.class, accountTo.getOwner());
-        System.out.println("account1 = " + account1);
-        assertEquals(0, Double.compare(maxUnits, account1.getBalance()));
+        accountFrom = entityManager.find(Account.class, accountFrom.getOwner());
+        System.out.println("accountFrom = " + accountFrom);
+        assertEquals(0, Double.compare(0, accountFrom.getBalance()));
+        accountTo = entityManager.find(Account.class, accountTo.getOwner());
+        System.out.println("accountTo = " + accountTo);
+        assertEquals(0, Double.compare(maxUnits, accountTo.getBalance()));
 
     }
 
     private void performParallelWithdraws(int maxUnits, Account accountFrom, Account accountTo, TransferServiceImpl service) throws InterruptedException, ExecutionException {
-        ExecutorService executorService = Executors.newFixedThreadPool(4);
+        ExecutorService executorService = Executors.newFixedThreadPool(20);
 
         List<Callable<Object>> tasks = new ArrayList<Callable<Object>>();
         for (int i = 0; i < maxUnits; i++) {
-            int finalI = i;
             Callable<Object> callable = Executors.callable(new Thread() {
                 @Override
                 public void run() {
                     try {
-                        System.out.println("i = " + finalI);
                         service.transfer(accountFrom.getOwner(), accountTo.getOwner(), 1);
                     } catch (InvalidAmountForTransferException e) {
                         e.printStackTrace();
                     } catch (InvalidAccountException e) {
                         e.printStackTrace();
                     } catch (NotEnoughFundsException e) {
+                        e.printStackTrace();
+                    } catch (SameAccountProhibitedOperationException e) {
                         e.printStackTrace();
                     }
                 }
@@ -212,8 +239,7 @@ public class TransferTest {
         }
         List<Future<Object>> futures = executorService.invokeAll(tasks);
         for (Future<Object> future : futures) {
-            // The result is printed only after all the futures are complete. (i.e. after 5 seconds)
-            System.out.println(future.get());
+            future.get();
         }
     }
 }

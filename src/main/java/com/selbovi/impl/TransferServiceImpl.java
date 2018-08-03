@@ -4,11 +4,13 @@ import com.selbovi.TransferService;
 import com.selbovi.exception.InvalidAccountException;
 import com.selbovi.exception.InvalidAmountForTransferException;
 import com.selbovi.exception.NotEnoughFundsException;
+import com.selbovi.exception.SameAccountProhibitedOperationException;
 import com.selbovi.model.Account;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.LockModeType;
+import javax.persistence.PersistenceUnit;
 
 public class TransferServiceImpl implements TransferService {
 
@@ -19,26 +21,31 @@ public class TransferServiceImpl implements TransferService {
     }
 
     @Override
-    public void transfer(String from, String to, double amount) throws InvalidAmountForTransferException, InvalidAccountException, NotEnoughFundsException {
+    public void transfer(String from, String to, double amount) throws InvalidAmountForTransferException, InvalidAccountException, NotEnoughFundsException, SameAccountProhibitedOperationException {
         if (amount <= 0) {
             throw new InvalidAmountForTransferException(amount);
         }
 
+        if (from.equals(to)) {
+            throw new SameAccountProhibitedOperationException(from);
+        }
+
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         entityManager.getTransaction().begin();
+
         Account accountFrom = findAccount(from, entityManager);
         Account accountTo = findAccount(to, entityManager);
+
         withdraw(accountFrom, amount);
         fill(accountTo, amount);
 
         entityManager.getTransaction().commit();
-
         entityManager.close();
     }
 
     public Account findAccount(String accountOwnerName, EntityManager entityManager) throws InvalidAccountException {
 
-        Account account = entityManager.find(Account.class, accountOwnerName);
+        Account account = entityManager.find(Account.class, accountOwnerName, LockModeType.PESSIMISTIC_WRITE);
         if (account == null) {
             throw new InvalidAccountException(accountOwnerName);
         }

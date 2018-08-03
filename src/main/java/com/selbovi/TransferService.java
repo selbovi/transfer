@@ -3,6 +3,7 @@ package com.selbovi;
 import com.selbovi.exception.InvalidAccountException;
 import com.selbovi.exception.InvalidAmountForTransferException;
 import com.selbovi.exception.NotEnoughFundsException;
+import com.selbovi.exception.SameAccountProhibitedOperationException;
 
 /**
  * Contract for money transfer operations.
@@ -15,6 +16,6 @@ public interface TransferService {
      * @param to        owner name of account to
      * @param amount    how much money to transfer
      */
-    void transfer(String from, String to, double amount) throws InvalidAmountForTransferException, InvalidAccountException, NotEnoughFundsException;
+    void transfer(String from, String to, double amount) throws InvalidAmountForTransferException, InvalidAccountException, NotEnoughFundsException, SameAccountProhibitedOperationException;
 
 }
