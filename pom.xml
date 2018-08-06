@@ -14,6 +14,7 @@
         <hibernate.version>5.2.10.Final</hibernate.version>
         <junit.version>4.12</junit.version>
         <rest-assured.version>3.1.0</rest-assured.version>
+        <undertow-servlet.version>2.0.11.Final</undertow-servlet.version>
     </properties>
 
     <dependencies>
@@ -31,6 +32,11 @@
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-core</artifactId>
             <version>${hibernate.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.undertow</groupId>
+            <artifactId>undertow-servlet</artifactId>
+            <version>${undertow-servlet.version}</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
