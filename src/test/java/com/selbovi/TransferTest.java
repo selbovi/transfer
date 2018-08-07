@@ -29,6 +29,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import static com.selbovi.util.SaveHelper.saveAccount;
 import static org.junit.Assert.assertEquals;
 
 public class TransferTest {
@@ -146,23 +147,6 @@ public class TransferTest {
         assertEquals(0, result);
     }
 
-    /**
-     * Checks whether accounts balance correctly updated (when receives money).
-     */
-    @Test
-    public void fillAccountWithMoney() {
-        //given:
-        TransferServiceImpl service = new TransferServiceImpl(entityManagerFactory);
-        Account account = new Account("owner", 100);
-        double amount = 21;
-
-        //when:
-        service.fill(account, amount);
-
-        //then:
-        assertEquals(0, Double.compare(121, account.getBalance()));
-    }
-
     @Test
     public void successfulTransfer() throws InvalidAmountForTransferException, InvalidAccountException, NotEnoughFundsException, SameAccountProhibitedOperationException {
         //given:
@@ -188,32 +172,26 @@ public class TransferTest {
     @Test
     public void concurrentWithdrawalTest() throws InterruptedException, ExecutionException {
         //given:
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-        entityManager.getTransaction().begin();
-        int maxUnits = 100000;
+        int maxUnits = 1000;
         Account accountFrom = new Account("ownerFrom", maxUnits);
         Account accountTo = new Account("ownerTo", 0);
-        entityManager.persist(accountFrom);
-        entityManager.persist(accountTo);
-        entityManager.getTransaction().commit();
-        final TransferServiceImpl service = new TransferServiceImpl(entityManagerFactory);
+        saveAccount(accountFrom, entityManagerFactory);
+        saveAccount(accountTo, entityManagerFactory);
 
         //when:
-        performParallelWithdraws(maxUnits, accountFrom, accountTo, service);
+        performParallelWithdraws(maxUnits, accountFrom, accountTo);
 
         //then:
-        entityManager = entityManagerFactory.createEntityManager();
+        EntityManager entityManager = entityManagerFactory.createEntityManager();
         accountFrom = entityManager.find(Account.class, accountFrom.getOwner());
-        System.out.println("accountFrom = " + accountFrom);
         assertEquals(0, Double.compare(0, accountFrom.getBalance()));
         accountTo = entityManager.find(Account.class, accountTo.getOwner());
-        System.out.println("accountTo = " + accountTo);
         assertEquals(0, Double.compare(maxUnits, accountTo.getBalance()));
-
     }
 
-    private void performParallelWithdraws(int maxUnits, Account accountFrom, Account accountTo, TransferServiceImpl service) throws InterruptedException, ExecutionException {
-        ExecutorService executorService = Executors.newFixedThreadPool(20);
+    private void performParallelWithdraws(int maxUnits, Account accountFrom, Account accountTo) throws InterruptedException, ExecutionException {
+        ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        final TransferServiceImpl service = new TransferServiceImpl(entityManagerFactory);
 
         List<Callable<Object>> tasks = new ArrayList<Callable<Object>>();
         for (int i = 0; i < maxUnits; i++) {

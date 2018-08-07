@@ -11,6 +11,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.LockModeType;
 import javax.persistence.PersistenceUnit;
+import java.text.MessageFormat;
 
 public class TransferServiceImpl implements TransferService {
 
@@ -41,6 +42,12 @@ public class TransferServiceImpl implements TransferService {
 
         entityManager.getTransaction().commit();
         entityManager.close();
+
+        System.out.println(
+                MessageFormat.format(
+                        "Successfully transferred {0} unit(s), from account = \"{1}\" ({2} units), to account = \"{3}\" ({4} units).", amount, from, accountFrom.getBalance(), to, accountTo.getBalance()
+                )
+        );
     }
 
     public Account findAccount(String accountOwnerName, EntityManager entityManager) throws InvalidAccountException {
@@ -62,7 +69,7 @@ public class TransferServiceImpl implements TransferService {
         account.setBalance(updatedBalance);
     }
 
-    public void fill(Account account, double amount) {
+    private void fill(Account account, double amount) {
         double updatedBalance = account.getBalance() + amount;
         account.setBalance(updatedBalance);
     }
