@@ -119,7 +119,7 @@ public class TransferTest {
 
         //expect:
         thrown.expect(NotEnoughFundsException.class);
-        thrown.expectMessage("Account " + ownerName + " has not enough funds to complete operation, requsted amount: " + requestedAmount + ", available: " + accountFrom.getBalance());
+        thrown.expectMessage("Account \"" + ownerName + "\" has not enough funds to complete operation, requsted amount: " + requestedAmount + ", available: " + accountFrom.getBalance());
 
         //when:
         new TransferServiceImpl(entityManagerFactory).transfer(accountFrom.getOwner(), accountTo.getOwner(), requestedAmount);
