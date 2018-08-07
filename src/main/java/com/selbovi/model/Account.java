@@ -7,6 +7,9 @@ import lombok.NoArgsConstructor;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 
+/**
+ * Applications main model representing bank account.
+ */
 @Entity
 @Data
 @AllArgsConstructor

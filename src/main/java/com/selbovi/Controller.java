@@ -10,16 +10,29 @@ import io.undertow.server.handlers.PathHandler;
 import java.util.Deque;
 import java.util.Map;
 
+/**
+ * Handler for processing "transfer" requests.
+ */
 public class Controller extends PathHandler {
 
     private TransferService transferService;
 
-    public Controller(TransferService transferService) {
+    /**
+     * Constructor of a handler.
+     *
+     * @param transferService {@link TransferService}
+     */
+    public Controller(final TransferService transferService) {
         this.transferService = transferService;
     }
 
+    /**
+     * Process request that could be handled by this class.
+     *
+     * @param exchange represnts request-response interaction.
+     */
     @Override
-    public void handleRequest(HttpServerExchange exchange) {
+    public void handleRequest(final HttpServerExchange exchange) {
         Map<String, Deque<String>> queryParameters =
                 exchange.getQueryParameters();
 
@@ -29,10 +42,10 @@ public class Controller extends PathHandler {
         String result = "success";
         try {
             transferService.transfer(fromAccount, toAccount, Double.parseDouble(amount));
-        } catch (InvalidAmountForTransferException |
-                InvalidAccountException |
-                SameAccountProhibitedOperationException |
-                NotEnoughFundsException e) {
+        } catch (InvalidAmountForTransferException
+                | InvalidAccountException
+                | SameAccountProhibitedOperationException
+                | NotEnoughFundsException e) {
             result = e.getMessage();
         }
 
