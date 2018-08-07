@@ -19,17 +19,14 @@ import javax.persistence.Persistence;
 import javax.persistence.Query;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
-import static com.selbovi.util.SaveHelper.saveAccount;
+import static com.selbovi.util.SaveHelper.saveAccounts;
 import static org.junit.Assert.assertEquals;
 
 public class TransferTest {
@@ -54,6 +51,7 @@ public class TransferTest {
         Query q = entityManager.createQuery("DELETE FROM Account");
         q.executeUpdate();
         entityManager.getTransaction().commit();
+        entityManagerFactory.close();
     }
 
     /**
@@ -62,9 +60,8 @@ public class TransferTest {
      * @throws InvalidAccountException exception
      */
     @Test
-    public void throwExceptionForNonExistingAccount() throws InvalidAccountException {
+    public void throwExceptionForNonExistingAccount() throws Exception {
         //given:
-        TransferServiceImpl service = new TransferServiceImpl(entityManagerFactory);
         String wrongAccountOwnerName = "AccountOne";
 
         //expected:
@@ -72,9 +69,7 @@ public class TransferTest {
         thrown.expectMessage(InvalidAccountException.ATTEMPT_MSG + wrongAccountOwnerName);
 
         //when:
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-        entityManager.getTransaction().begin();
-        service.findAccount(wrongAccountOwnerName, entityManager);
+        new TransferServiceImpl(entityManagerFactory).transfer(wrongAccountOwnerName, "ownerTo", Integer.MAX_VALUE);
     }
 
     @Test
@@ -114,57 +109,34 @@ public class TransferTest {
      * Checks whether exception is thrown, when accounts balance is too small to withdraw from).
      */
     @Test
-    public void withdrawFromAccountWhenFundsNotEnough() throws NotEnoughFundsException {
+    public void throwNotEnoughFundsException() throws Exception {
         //given:
-        TransferServiceImpl service = new TransferServiceImpl(entityManagerFactory);
-        String ownerName = "owner";
-        Account account = new Account(ownerName, 1);
-        double requested = 100;
+        String ownerName = "accountFrom";
+        Account accountFrom = new Account(ownerName, 1);
+        Account accountTo = new Account("accountTo", 1);
+        saveAccounts(entityManagerFactory, accountFrom, accountTo);
+        double requestedAmount = 100;
 
         //expect:
         thrown.expect(NotEnoughFundsException.class);
-        thrown.expectMessage("Account " + ownerName + " has not enough funds to complete operation, requsted amount: " + requested + ", available: " + account.getBalance());
+        thrown.expectMessage("Account " + ownerName + " has not enough funds to complete operation, requsted amount: " + requestedAmount + ", available: " + accountFrom.getBalance());
 
         //when:
-        service.withdraw(account, requested);
-    }
-
-    /**
-     * Checks whether accounts balance correctly updated, when balance is enough to withdraw requested amount).
-     */
-    @Test
-    public void withdrawFromAccount() throws NotEnoughFundsException {
-        //given:
-        TransferServiceImpl service = new TransferServiceImpl(entityManagerFactory);
-        Account account = new Account("owner", 100);
-        double requested = 1;
-
-        //when:
-        service.withdraw(account, requested);
-
-        //then:
-        int result = Double.compare(99, account.getBalance());
-        assertEquals(0, result);
+        new TransferServiceImpl(entityManagerFactory).transfer(accountFrom.getOwner(), accountTo.getOwner(), requestedAmount);
     }
 
     @Test
     public void successfulTransfer() throws InvalidAmountForTransferException, InvalidAccountException, NotEnoughFundsException, SameAccountProhibitedOperationException {
         //given:
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-        entityManager.getTransaction().begin();
         Account accountFrom = new Account("ownerFrom", 100);
         Account accountTo = new Account("ownerTo", 0);
-        entityManager.persist(accountFrom);
-        entityManager.persist(accountTo);
-        entityManager.getTransaction().commit();
-        entityManager.close();
-        TransferServiceImpl service = new TransferServiceImpl(entityManagerFactory);
+        saveAccounts(entityManagerFactory, accountFrom, accountTo);
 
         //when:
-        service.transfer(accountFrom.getOwner(), accountTo.getOwner(), 100);
+        new TransferServiceImpl(entityManagerFactory).transfer(accountFrom.getOwner(), accountTo.getOwner(), 100);
 
         //then:
-        entityManager = entityManagerFactory.createEntityManager();
+        EntityManager entityManager = entityManagerFactory.createEntityManager();
         assertEquals(0, Double.compare(0, entityManager.find(Account.class, accountFrom.getOwner()).getBalance()));
         assertEquals(0, Double.compare(100, entityManager.find(Account.class, accountTo.getOwner()).getBalance()));
     }
@@ -175,8 +147,7 @@ public class TransferTest {
         int maxUnits = 1000;
         Account accountFrom = new Account("ownerFrom", maxUnits);
         Account accountTo = new Account("ownerTo", 0);
-        saveAccount(accountFrom, entityManagerFactory);
-        saveAccount(accountTo, entityManagerFactory);
+        saveAccounts(entityManagerFactory, accountFrom, accountTo);
 
         //when:
         performParallelWithdraws(maxUnits, accountFrom, accountTo);
@@ -187,6 +158,7 @@ public class TransferTest {
         assertEquals(0, Double.compare(0, accountFrom.getBalance()));
         accountTo = entityManager.find(Account.class, accountTo.getOwner());
         assertEquals(0, Double.compare(maxUnits, accountTo.getBalance()));
+        entityManager.close();
     }
 
     private void performParallelWithdraws(int maxUnits, Account accountFrom, Account accountTo) throws InterruptedException, ExecutionException {

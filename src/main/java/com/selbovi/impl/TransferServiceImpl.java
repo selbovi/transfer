@@ -10,7 +10,6 @@ import com.selbovi.model.Account;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.LockModeType;
-import javax.persistence.PersistenceUnit;
 import java.text.MessageFormat;
 
 public class TransferServiceImpl implements TransferService {
@@ -32,25 +31,27 @@ public class TransferServiceImpl implements TransferService {
         }
 
         EntityManager entityManager = entityManagerFactory.createEntityManager();
-        entityManager.getTransaction().begin();
+        try {
+            entityManager.getTransaction().begin();
+            Account accountFrom = findAccount(from, entityManager);
+            Account accountTo = findAccount(to, entityManager);
 
-        Account accountFrom = findAccount(from, entityManager);
-        Account accountTo = findAccount(to, entityManager);
+            withdraw(accountFrom, amount);
+            fill(accountTo, amount);
 
-        withdraw(accountFrom, amount);
-        fill(accountTo, amount);
+            System.out.println(
+                    MessageFormat.format(
+                            "Successfully transferred {0} unit(s), from account = \"{1}\" ({2} units), to account = \"{3}\" ({4} units).", amount, from, accountFrom.getBalance(), to, accountTo.getBalance()
+                    )
+            );
+        } finally {
+            entityManager.getTransaction().commit();
+            entityManager.close();
+        }
 
-        entityManager.getTransaction().commit();
-        entityManager.close();
-
-        System.out.println(
-                MessageFormat.format(
-                        "Successfully transferred {0} unit(s), from account = \"{1}\" ({2} units), to account = \"{3}\" ({4} units).", amount, from, accountFrom.getBalance(), to, accountTo.getBalance()
-                )
-        );
     }
 
-    public Account findAccount(String accountOwnerName, EntityManager entityManager) throws InvalidAccountException {
+    private Account findAccount(String accountOwnerName, EntityManager entityManager) throws InvalidAccountException {
 
         Account account = entityManager.find(Account.class, accountOwnerName, LockModeType.PESSIMISTIC_WRITE);
         if (account == null) {
@@ -59,7 +60,7 @@ public class TransferServiceImpl implements TransferService {
         return account;
     }
 
-    public void withdraw(Account account, double withdrawAmount) throws NotEnoughFundsException {
+    private void withdraw(Account account, double withdrawAmount) throws NotEnoughFundsException {
         double balance = account.getBalance();
         if (withdrawAmount > balance) {
             throw new NotEnoughFundsException(account, withdrawAmount);
