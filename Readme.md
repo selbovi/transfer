@@ -23,6 +23,14 @@ successful or not in case service could correctly process the request.
 
 > mvn -Dtest=ControllerTest test
 
+##### for fun and demonstration purposes
+
+Game which is also demonstrates services fault tolerance. In this demonstration, random amount of money
+transferred between randomly choosen accounts. Transfer operations between random accounts pass in parallell.
+At the end of the game, we assert that total amount of money on the accounts before and after the game are same. 
+
+> mvn -Dtest=ControllerTest#gameOfDrunkTransferAttempts test
+
 ##### run all tests
 
 > mvn clean test  

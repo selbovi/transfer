@@ -31,9 +31,6 @@ import static com.selbovi.util.SaveHelper.saveAccounts;
 import static org.junit.Assert.assertEquals;
 
 public class TransferTest {
-    //TODO stdout make operations visible
-    //TODO account empty or NotSpecified
-    //TODO game transfer between all accounts and then check consistency
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 

@@ -31,7 +31,7 @@ public class TransferRequestHandler extends PathHandler {
     /**
      * Process request that could be handled by this class.
      *
-     * @param exchange represents request-response interaction.
+     * @param exchange represents http request-response interaction.
      */
     @Override
     public void handleRequest(final HttpServerExchange exchange) {

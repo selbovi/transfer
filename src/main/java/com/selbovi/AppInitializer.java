@@ -19,7 +19,6 @@ public class AppInitializer {
             .createEntityManagerFactory("com.selbovi.jpa");
     private static Undertow server;
 
-
     /**
      * Apps entrypoint.
      * @param args arguments

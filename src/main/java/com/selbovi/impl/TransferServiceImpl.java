@@ -31,7 +31,7 @@ public class TransferServiceImpl implements TransferService {
      * Operation of money transfers between accounts.
      *
      * @param accountOwnerNameFrom from account
-     * @param accountOwnerNameTo   toName account
+     * @param accountOwnerNameTo   to account
      * @param amount               amount of money toName transfer (units)
      * @throws InvalidAmountForTransferException
      * @throws InvalidAccountException
