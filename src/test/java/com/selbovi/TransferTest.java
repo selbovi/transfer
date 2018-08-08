@@ -48,7 +48,7 @@ public class TransferTest {
         Query q = entityManager.createQuery("DELETE FROM Account");
         q.executeUpdate();
         entityManager.getTransaction().commit();
-        entityManagerFactory.close();
+        entityManager.close();
     }
 
     /**

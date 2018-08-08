@@ -2,6 +2,7 @@ package com.selbovi;
 
 import com.selbovi.model.Account;
 import org.hamcrest.core.StringContains;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -36,8 +37,17 @@ public class ControllerTest {
 
     @AfterClass
     public static void clear() {
-        entityManagerFactory.close();
         AppInitializer.shutdown();
+    }
+
+    @After
+    public void cleanup() {
+        EntityManager entityManager = entityManagerFactory.createEntityManager();
+        entityManager.getTransaction().begin();
+        Query q = entityManager.createQuery("DELETE FROM Account");
+        q.executeUpdate();
+        entityManager.getTransaction().commit();
+        entityManager.close();
     }
 
     @Test
@@ -82,7 +92,6 @@ public class ControllerTest {
                 .body(StringContains.containsString("Account \"ownerFrom\" has not enough funds to complete operation"));
     }
 
-    //TODO clear DB
     @Test
     public void successfulTransfer() {
         Account accountFrom = new Account("ownerFromAccount", 10);
