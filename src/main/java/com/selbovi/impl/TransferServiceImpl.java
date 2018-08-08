@@ -10,7 +10,6 @@ import com.selbovi.model.Account;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.LockModeType;
-import java.text.MessageFormat;
 
 /**
  * Implementation for money transfer operations.
@@ -59,14 +58,6 @@ public class TransferServiceImpl implements TransferService {
 
             withdraw(accountFrom, amount);
             fill(accountTo, amount);
-
-            System.out.println(
-                    MessageFormat.format(
-                            "Successfully transferred {0} unit(s), from account = \"{1}\" ({2} units), "
-                                    + "to account = \"{3}\" ({4} units).",
-                            amount, accountFrom, accountFrom.getBalance(), accountTo, accountTo.getBalance()
-                    )
-            );
         } finally {
             entityManager.getTransaction().commit();
             entityManager.close();

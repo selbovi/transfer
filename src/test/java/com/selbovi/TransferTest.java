@@ -18,6 +18,7 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 import javax.persistence.Query;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -33,7 +34,6 @@ public class TransferTest {
     //TODO stdout make operations visible
     //TODO account empty or NotSpecified
     //TODO game transfer between all accounts and then check consistency
-    //TODO rest api test
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
@@ -92,7 +92,7 @@ public class TransferTest {
      * @throws InvalidAmountForTransferException exception
      */
     @Test
-    public void checkBalanceIsPositive() throws InvalidAmountForTransferException, InvalidAccountException, NotEnoughFundsException, SameAccountProhibitedOperationException {
+    public void throwInvalidAmountForTransferException() throws InvalidAmountForTransferException, InvalidAccountException, NotEnoughFundsException, SameAccountProhibitedOperationException {
         //given:
         TransferServiceImpl service = new TransferServiceImpl(entityManagerFactory);
         double invalidAmount = -1;
@@ -145,8 +145,8 @@ public class TransferTest {
     public void concurrentWithdrawalTest() throws InterruptedException, ExecutionException {
         //given:
         int maxUnits = 1000;
-        Account accountFrom = new Account("ownerFrom", maxUnits);
-        Account accountTo = new Account("ownerTo", 0);
+        Account accountFrom = new Account("accountFromOwnerName", maxUnits);
+        Account accountTo = new Account("accountToOwnerName", 0);
         saveAccounts(entityManagerFactory, accountFrom, accountTo);
 
         //when:
@@ -155,8 +155,10 @@ public class TransferTest {
         //then:
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         accountFrom = entityManager.find(Account.class, accountFrom.getOwner());
-        assertEquals(0, Double.compare(0, accountFrom.getBalance()));
         accountTo = entityManager.find(Account.class, accountTo.getOwner());
+        System.out.println("accountFrom = " + accountFrom);
+        System.out.println("accountTo = " + accountTo);
+        assertEquals(0, Double.compare(0, accountFrom.getBalance()));
         assertEquals(0, Double.compare(maxUnits, accountTo.getBalance()));
         entityManager.close();
     }
@@ -171,21 +173,25 @@ public class TransferTest {
                 @Override
                 public void run() {
                     try {
-                        service.transfer(accountFrom.getOwner(), accountTo.getOwner(), 1);
-                    } catch (InvalidAmountForTransferException e) {
-                        e.printStackTrace();
-                    } catch (InvalidAccountException e) {
-                        e.printStackTrace();
-                    } catch (NotEnoughFundsException e) {
-                        e.printStackTrace();
-                    } catch (SameAccountProhibitedOperationException e) {
-                        e.printStackTrace();
+                        int amount = 1;
+                        service.transfer(accountFrom.getOwner(), accountTo.getOwner(), amount);
+                        System.out.println(
+                                MessageFormat.format(
+                                        "Successfully transferred {0} unit(s), from \"{1}\", "
+                                                + "to \"{2}\". ({3})",
+                                        amount, accountFrom.getOwner(), accountTo.getOwner(),
+                                        Thread.currentThread().getName()
+                                )
+                        );
+                    } catch (InvalidAmountForTransferException
+                            | InvalidAccountException
+                            | NotEnoughFundsException
+                            | SameAccountProhibitedOperationException e) {
+                        System.err.println(e.getMessage());
                     }
                 }
             });
             tasks.add(callable);
-
-
         }
         List<Future<Object>> futures = executorService.invokeAll(tasks);
         for (Future<Object> future : futures) {

@@ -1,5 +1,6 @@
-package com.selbovi;
+package com.selbovi.impl;
 
+import com.selbovi.TransferService;
 import com.selbovi.exception.InvalidAccountException;
 import com.selbovi.exception.InvalidAmountForTransferException;
 import com.selbovi.exception.NotEnoughFundsException;
@@ -7,13 +8,14 @@ import com.selbovi.exception.SameAccountProhibitedOperationException;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
 
+import java.text.MessageFormat;
 import java.util.Deque;
 import java.util.Map;
 
 /**
  * Handler for processing "transfer" requests.
  */
-public class Controller extends PathHandler {
+public class TransferRequestHandler extends PathHandler {
 
     private TransferService transferService;
 
@@ -22,14 +24,14 @@ public class Controller extends PathHandler {
      *
      * @param transferService {@link TransferService}
      */
-    public Controller(final TransferService transferService) {
+    public TransferRequestHandler(final TransferService transferService) {
         this.transferService = transferService;
     }
 
     /**
      * Process request that could be handled by this class.
      *
-     * @param exchange represnts request-response interaction.
+     * @param exchange represents request-response interaction.
      */
     @Override
     public void handleRequest(final HttpServerExchange exchange) {
@@ -39,7 +41,11 @@ public class Controller extends PathHandler {
         String fromAccount = queryParameters.get("fromAccount").getFirst();
         String toAccount = queryParameters.get("toAccount").getFirst();
         String amount = queryParameters.get("amount").getFirst();
-        String result = "success";
+        String result = MessageFormat.format(
+                "Successfully transferred {0} unit(s), from \"{1}\", to \"{2}\".",
+                amount, fromAccount, toAccount
+        );
+
         try {
             transferService.transfer(fromAccount, toAccount, Double.parseDouble(amount));
         } catch (InvalidAmountForTransferException

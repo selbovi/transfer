@@ -28,7 +28,6 @@ public class ControllerTest {
         AppInitializer.shutdown();
     }
 
-    //TODO body when answer is success
     @Test
     public void failInvalidAccount() {
         given()
@@ -86,6 +85,6 @@ public class ControllerTest {
                 .when().get("transfer")
                 .then()
                 .statusCode(200)
-                .body(StringContains.containsString("success"));
+                .body(StringContains.containsString("Successfully transferred"));
     }
 }
