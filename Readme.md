@@ -1,5 +1,17 @@
 # RESTful service for money transfers between accounts.
 
+
+## drawbacks found:
+* Lombok;
+* Balances stored in double;
+* Commit in final block, no rollbacks;
+* Poor REST: plain text responses, query params, GET for transfers;
+* Double.compare instead of a direct comparison;
+* No params validation;
+* Interfaces/*Impl classes without a visible reason;
+* Unit tests are functional ones in fact.
+* And the critical issue - there is no interface for creating accounts and no pre-created ones. So, basically, the main functionality is unreachable.
+
 ## About testing:
 
 ##### test proves that parallel transfer operations, between same accounts, do not lead for data integrity loss   
